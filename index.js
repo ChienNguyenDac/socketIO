@@ -1,17 +1,23 @@
 import { Server } from "socket.io"
-const io = new Server(8900, {
+
+const port = process.env.PORT || 8900
+
+const io = new Server(port, {
     cors:{
         origin: 'http://localhost:3000',
     },
 })
 
-var users = []
-const addUser = (socketId, userId) => {
+var users = []  // user: { userId, username }
+
+
+const addUser = (socketId, userId, username, avatar) => {
     if(!userId) return
-    if(!users.some( user => user.userId === userId ))
+    if(!users.some( user => user.userId === userId )){
         users.push({
-            userId, socketId
+            username, userId, socketId, avatar
         })
+    }
 }
 
 const removeUser = socketId => {
@@ -26,15 +32,13 @@ const getUser = userId => {
 io.on("connection", socket => {
     //  when connect
     console.log('a user connected.')
-    socket.on("addUser", userId => {
-        console.log(userId)
-        addUser(socket.id, userId)
+    socket.on("addUser", (userId, username, avatar) => {
+        addUser(socket.id, userId, username, avatar)
         io.emit("getUser", users)
     })
 
     //  send & get message:  client -> send msg to mongodb -> send to socket -> sclient
-    socket.on('sendMsg', data => {
-        const { receiveId, message } = data
+    socket.on('sendMsg', ( receiveId, message ) => {
         console.log('sending...')
         console.log(message.conversationId)
         const user = getUser(receiveId)
